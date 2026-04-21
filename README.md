@@ -31,116 +31,160 @@ Une fois installé, tu peux demander à Claude des trucs comme :
 | `gsc_find_keyword_opportunities` | Trouve les quick wins (impressions hautes + position rattrapable) |
 | `gsc_get_top_pages` | Top pages triées par clicks/impressions/CTR/position |
 
-### Installation
+> **Bon à savoir** : tu verras qu'on te fait "choisir un site par défaut" à l'installation. Ce n'est pas une limitation — c'est juste le site utilisé quand tu ne précises rien à Claude. Tu peux interroger **n'importe quelle propriété GSC accessible à ton compte Google** en le précisant dans ta demande (ex. *"Analyse les performances de site-b.fr sur 7 jours"*).
 
-**Prérequis** : Node.js 18+ installé, Claude Desktop.
+---
 
-#### Étape 1 — Récupérer et builder le projet
+## Installation pas à pas
 
-Télécharger le ZIP depuis la [page Releases](../../releases), puis :
+### Étape 1 — Prérequis
 
-```bash
-cd mcp-gsc-lucky
-npm install
-npm run build
+- **Node.js 18 ou plus** installé sur ta machine ([télécharger ici](https://nodejs.org/))
+- **Claude Desktop** installé ([télécharger ici](https://claude.ai/download))
+- Un **compte Google** avec accès à au moins une propriété Search Console
+
+### Étape 2 — Télécharger et décompresser le projet
+
+1. Télécharge le fichier `mcp-gsc-lucky-ready.zip` depuis la [page Releases](../../releases) du repo.
+2. Décompresse-le à un endroit stable (pas dans Téléchargements ni OneDrive — la sync peut poser problème). Par exemple :
+   - Windows : `C:\Users\TonNom\mcp\`
+   - macOS/Linux : `~/mcp/`
+3. ⚠️ **Attention — dossier imbriqué** : après dézip, tu obtiens un dossier `mcp-gsc-lucky-ready/` qui contient lui-même un sous-dossier `mcp-gsc-lucky/`. Le **vrai** dossier de travail est celui du dedans.
+
+Ton arborescence doit ressembler à ça :
+
+```
+C:\Users\TonNom\mcp\mcp-gsc-lucky-ready\mcp-gsc-lucky\
+    ├── dist\
+    ├── src\
+    ├── package.json
+    ├── README.md
+    └── ...
 ```
 
-Ou cloner depuis GitHub :
+**Le chemin qui compte dans la suite est celui du dossier le plus profond** (`...\mcp-gsc-lucky-ready\mcp-gsc-lucky\`).
+
+### Étape 3 — Installer les dépendances
+
+Ouvre un terminal (PowerShell ou cmd sur Windows, Terminal sur macOS), va dans le dossier de travail, puis installe les dépendances :
 
 ```bash
-git clone https://github.com/sebastienmonnier59-dotcom/mcp-gsc-lucky.git
-cd mcp-gsc-lucky
+cd C:\Users\TonNom\mcp\mcp-gsc-lucky-ready\mcp-gsc-lucky
 npm install
-npm run build
 ```
 
-#### Étape 2 — Créer un OAuth Client dans Google Cloud Console
+Ça télécharge les librairies nécessaires (google-auth-library, MCP SDK, etc.). Ça prend 30 secondes à 1 minute.
 
-1. Aller sur [console.cloud.google.com](https://console.cloud.google.com/) — créer ou sélectionner un projet.
-2. **APIs & Services → Library** → activer **Google Search Console API**.
-3. **APIs & Services → OAuth consent screen** → External → remplir le minimum requis → ajouter ton compte Google comme **test user**.
-4. **APIs & Services → Credentials → Create credentials → OAuth client ID** → type **Desktop app**.
-5. Copier le **Client ID** et le **Client Secret** affichés.
+### Étape 4 — Créer une application OAuth dans Google Cloud
 
-#### Étape 3 — Lancer l'assistant OAuth (une seule fois)
+C'est l'étape la plus longue, mais elle ne se fait **qu'une seule fois**. Google exige que chaque utilisateur crée sa propre "application" pour autoriser Claude à lire ses données GSC.
+
+#### 4.1 — Créer (ou sélectionner) un projet Google Cloud
+
+1. Va sur [console.cloud.google.com](https://console.cloud.google.com/).
+2. En haut à gauche, ouvre le sélecteur de projet → **Nouveau projet**.
+3. Nomme-le comme tu veux (ex. "MCP GSC") → **Créer**.
+4. Une fois créé, assure-toi que ton nouveau projet est bien sélectionné en haut à gauche.
+
+#### 4.2 — Activer l'API Search Console
+
+1. Dans le menu hamburger (☰) en haut à gauche, va dans **APIs & Services → Library**.
+2. Dans la barre de recherche, tape `Search Console API`.
+3. Clique sur le résultat **Google Search Console API** → **Enable**.
+
+#### 4.3 — Configurer l'écran de consentement OAuth
+
+1. Toujours dans **APIs & Services**, va dans **OAuth consent screen** (ou "Écran de consentement OAuth").
+2. Choisis **External** → **Create**.
+3. Remplis le strict minimum :
+   - **App name** : ce que tu veux (ex. "MCP GSC")
+   - **User support email** : ton email
+   - **Developer contact information** : ton email
+4. Clique **Save and continue** sur toutes les étapes suivantes (Scopes, etc. — rien à ajouter).
+5. À la fin, dans la section **Test users**, clique **Add users** et ajoute ton propre email Google (celui qui a accès à la GSC que tu veux lire). ⚠️ Cette étape est obligatoire, sinon Google refusera la connexion.
+
+#### 4.4 — Créer l'OAuth Client ID
+
+1. Toujours dans **APIs & Services**, va dans **Credentials**.
+2. Clique **+ Create credentials** en haut → **OAuth client ID**.
+3. **Application type** : choisis **Desktop app** (très important).
+4. Nomme-la (ex. "MCP GSC Desktop") → **Create**.
+5. Une fenêtre s'affiche avec ton **Client ID** et ton **Client Secret**. **Garde-la ouverte**, tu vas en avoir besoin à l'étape suivante.
+
+### Étape 5 — Lancer l'assistant d'authentification
+
+Retourne dans ton terminal (toujours dans le dossier `mcp-gsc-lucky`) et lance :
 
 ```bash
 node dist/auth.js
 ```
 
-Coller Client ID et Client Secret. Le navigateur s'ouvre, tu te connectes avec ton compte Google (celui qui a accès à la GSC), tu autorises, tu choisis la propriété par défaut.
+L'assistant va te demander :
+1. De **coller ton Client ID** (celui obtenu à l'étape 4.4) → entrée
+2. De **coller ton Client Secret** → entrée
+3. Un navigateur s'ouvre automatiquement → **connecte-toi avec le compte Google** qui a accès à la GSC (le même que celui ajouté en test user à l'étape 4.3) → autorise l'accès
+4. L'assistant te montre la liste de tes propriétés GSC accessibles → **choisis-en une comme site par défaut**
+   > Rappel : ce choix n'est pas bloquant. Tu pourras toujours interroger les autres sites en les précisant dans tes demandes à Claude.
 
-À la fin, l'assistant affiche directement dans le terminal un **bloc JSON prêt à coller** dans `claude_desktop_config.json`, avec ton chemin absolu et tes credentials déjà remplis. Copie-le.
+À la fin, l'assistant affiche dans le terminal un **bloc JSON prêt à copier** qui contient déjà toutes tes credentials et le chemin absolu vers le serveur. **Copie tout ce bloc**, tu vas en avoir besoin juste après.
 
-#### Étape 4 — Configurer Claude Desktop
+### Étape 6 — Configurer Claude Desktop
 
-Éditer `claude_desktop_config.json` :
-- **Windows** : `%APPDATA%\Claude\claude_desktop_config.json`
-- **macOS** : `~/Library/Application Support/Claude/claude_desktop_config.json`
+1. Ouvre le fichier `claude_desktop_config.json` :
+   - **Windows** : `%APPDATA%\Claude\claude_desktop_config.json` (tu peux taper ce chemin dans l'Explorateur)
+   - **macOS** : `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-Coller le bloc généré par l'assistant à l'intérieur de `"mcpServers"`. Ça ressemble à ça :
+   Si le fichier n'existe pas, crée-le. Si c'est la première fois, il doit ressembler à ça :
+   ```json
+   {
+     "mcpServers": {}
+   }
+   ```
 
-```json
-{
-  "mcpServers": {
-    "gsc-lucky": {
-      "command": "node",
-      "args": ["C:\\chemin\\absolu\\vers\\mcp-gsc-lucky\\dist\\index.js"],
-      "env": {
-        "GSC_LUCKY_CLIENT_ID": "xxx.apps.googleusercontent.com",
-        "GSC_LUCKY_CLIENT_SECRET": "GOCSPX-xxx",
-        "GSC_LUCKY_REFRESH_TOKEN": "1//0xxx",
-        "GSC_DEFAULT_SITE_URL": "sc-domain:example.com"
-      }
-    }
-  }
-}
-```
+2. Colle le bloc généré par l'assistant **à l'intérieur** de `"mcpServers": { ... }`. Le résultat final ressemble à ça :
 
-> Sur Windows, les backslashes sont déjà doublés dans le bloc généré par l'assistant — copie tel quel.
+   ```json
+   {
+     "mcpServers": {
+       "gsc-lucky": {
+         "command": "node",
+         "args": ["C:\\Users\\TonNom\\mcp\\mcp-gsc-lucky-ready\\mcp-gsc-lucky\\dist\\index.js"],
+         "env": {
+           "GSC_LUCKY_CLIENT_ID": "xxx.apps.googleusercontent.com",
+           "GSC_LUCKY_CLIENT_SECRET": "GOCSPX-xxx",
+           "GSC_LUCKY_REFRESH_TOKEN": "1//0xxx",
+           "GSC_DEFAULT_SITE_URL": "sc-domain:example.com"
+         }
+       }
+     }
+   }
+   ```
 
-#### Étape 5 — Relancer Claude Desktop
+   > Si tu as déjà d'autres MCP configurés, ajoute **juste** l'entrée `"gsc-lucky": { ... }` à côté des autres, en respectant les virgules JSON.
 
-Quitter complètement (clic droit icône systray → Quit) puis rouvrir. Tester : *"Liste mes propriétés Search Console."*
+3. Sauvegarde le fichier.
 
-### Alternatives
+### Étape 7 — Relancer Claude Desktop
 
-Si tu préfères ne pas mettre les credentials dans la config Claude, deux autres modes sont supportés :
+1. **Quitte complètement** Claude Desktop. Fermer la fenêtre ne suffit pas :
+   - **Windows** : clic droit sur l'icône Claude dans la barre système (près de l'horloge) → **Quit**
+   - **macOS** : `Cmd + Q` dans Claude
+2. Relance Claude Desktop.
 
-- **Via fichier credentials** : l'assistant OAuth a déjà sauvegardé tes credentials dans `~/.config/mcp-gsc-lucky/credentials.json`. Dans ce cas, la config Claude peut se limiter au `command` et `args`, sans bloc `env`. L'assistant affiche aussi cette variante à la fin.
-- **Via service account (agence multi-comptes)** : voir la section ci-dessous.
+### Étape 8 — Tester
 
-### Mode multi-comptes (agence)
+Dans Claude, tape :
 
-Pour gérer plusieurs clients sans re-consentir à chaque fois, utiliser un **service account** plutôt que l'OAuth utilisateur :
+> *Liste mes propriétés Search Console.*
 
-1. Créer un service account dans Google Cloud Console, télécharger sa clé JSON.
-2. Dans chaque propriété GSC : Settings → Users and permissions → ajouter l'email du service account comme utilisateur.
-3. Dans `claude_desktop_config.json` :
+Tu devrais voir apparaître la liste de tes sites. Si oui, c'est bon 🎉
 
-```json
-{
-  "mcpServers": {
-    "gsc-lucky": {
-      "command": "node",
-      "args": ["/chemin/vers/dist/index.js"],
-      "env": {
-        "GOOGLE_APPLICATION_CREDENTIALS": "/chemin/vers/service-account.json",
-        "GSC_DEFAULT_SITE_URL": "sc-domain:example.com"
-      }
-    }
-  }
-}
-```
+### Dépannage rapide
 
-Le service account prend priorité sur l'OAuth utilisateur s'il est configuré.
-
-### Dépannage
-
-- **Claude dit "server disconnected"** → le MCP a crashé au démarrage. 90% du temps : credentials non configurées. Lancer `node dist/auth.js`.
-- **Erreur 403** → le compte utilisé n'est pas listé comme utilisateur sur la propriété GSC. Ajouter dans Search Console → Settings → Users and permissions.
-- **Erreur 401** → refresh token révoqué ou expiré. Relancer `node dist/auth.js`.
-- **`invalide et ignoré`** dans la config → erreur de syntaxe JSON. Vérifier les virgules, les accolades, et les backslashes doublés sur Windows.
+- **Claude dit "server disconnected"** → le MCP crashe au démarrage. 90% du temps c'est un problème de credentials ou de chemin. Relance `node dist/auth.js` pour régénérer le bloc à coller.
+- **Erreur JSON "invalid and ignored"** → erreur de syntaxe dans `claude_desktop_config.json`. Vérifie les virgules entre les serveurs, les accolades fermées, et que les backslashes Windows sont bien doublés (`\\`).
+- **Erreur 403 dans Claude** → ton compte n'est pas utilisateur de la propriété GSC. Ajoute-le dans Search Console → Settings → Users and permissions.
+- **Erreur 401** → le refresh token a expiré (ça peut arriver après plusieurs mois). Relance `node dist/auth.js` pour en obtenir un nouveau.
 
 ---
 
@@ -167,116 +211,160 @@ Once installed, you can ask Claude things like:
 | `gsc_find_keyword_opportunities` | Find quick wins (high impressions + recoverable position) |
 | `gsc_get_top_pages` | Top pages sorted by clicks/impressions/CTR/position |
 
-### Install
+> **Good to know**: the setup asks you to pick a "default site". This is not a limitation — it's just the one used when you don't specify anything to Claude. You can query **any GSC property your Google account has access to** by naming it in your prompt (e.g. *"Analyse site-b.com over 7 days"*).
 
-**Requirements**: Node.js 18+, Claude Desktop.
+---
 
-#### Step 1 — Get and build the project
+## Step-by-step installation
 
-Download the ZIP from the [Releases page](../../releases), then:
+### Step 1 — Requirements
 
-```bash
-cd mcp-gsc-lucky
-npm install
-npm run build
+- **Node.js 18+** installed ([download here](https://nodejs.org/))
+- **Claude Desktop** installed ([download here](https://claude.ai/download))
+- A **Google account** with access to at least one Search Console property
+
+### Step 2 — Download and unzip the project
+
+1. Download `mcp-gsc-lucky-ready.zip` from the [Releases page](../../releases).
+2. Unzip it somewhere stable (avoid Downloads or OneDrive — sync can cause issues). For example:
+   - Windows: `C:\Users\YourName\mcp\`
+   - macOS/Linux: `~/mcp/`
+3. ⚠️ **Heads up — nested folder**: after unzipping, you'll get a folder `mcp-gsc-lucky-ready/` that contains another folder `mcp-gsc-lucky/` inside. The **actual working folder** is the inner one.
+
+Your tree should look like:
+
+```
+C:\Users\YourName\mcp\mcp-gsc-lucky-ready\mcp-gsc-lucky\
+    ├── dist\
+    ├── src\
+    ├── package.json
+    ├── README.md
+    └── ...
 ```
 
-Or clone from GitHub:
+**The path that matters from here on is the innermost folder** (`...\mcp-gsc-lucky-ready\mcp-gsc-lucky\`).
+
+### Step 3 — Install dependencies
+
+Open a terminal (PowerShell/cmd on Windows, Terminal on macOS), `cd` into the working folder, then install:
 
 ```bash
-git clone https://github.com/sebastienmonnier59-dotcom/mcp-gsc-lucky.git
-cd mcp-gsc-lucky
+cd C:\Users\YourName\mcp\mcp-gsc-lucky-ready\mcp-gsc-lucky
 npm install
-npm run build
 ```
 
-#### Step 2 — Create an OAuth Client in Google Cloud Console
+Downloads the required libraries (google-auth-library, MCP SDK, etc.). Takes 30 seconds to 1 minute.
 
-1. Go to [console.cloud.google.com](https://console.cloud.google.com/) — create or pick a project.
-2. **APIs & Services → Library** → enable **Google Search Console API**.
-3. **APIs & Services → OAuth consent screen** → External → fill the required minimum → add your Google account as a **test user**.
-4. **APIs & Services → Credentials → Create credentials → OAuth client ID** → type **Desktop app**.
-5. Copy the **Client ID** and **Client Secret** shown.
+### Step 4 — Create an OAuth app in Google Cloud
 
-#### Step 3 — Run the OAuth helper (once)
+This is the longest step but it's a **one-time setup**. Google requires each user to create their own "app" to authorize Claude to read their GSC data.
+
+#### 4.1 — Create (or select) a Google Cloud project
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com/).
+2. Top-left, open the project picker → **New project**.
+3. Name it whatever (e.g. "MCP GSC") → **Create**.
+4. Once created, make sure your new project is selected in the top-left.
+
+#### 4.2 — Enable the Search Console API
+
+1. Menu (☰) top-left → **APIs & Services → Library**.
+2. Search for `Search Console API`.
+3. Click **Google Search Console API** → **Enable**.
+
+#### 4.3 — Configure the OAuth consent screen
+
+1. In **APIs & Services**, go to **OAuth consent screen**.
+2. Pick **External** → **Create**.
+3. Fill in the bare minimum:
+   - **App name**: anything (e.g. "MCP GSC")
+   - **User support email**: your email
+   - **Developer contact information**: your email
+4. Click **Save and continue** through the next screens (Scopes, etc. — nothing to add).
+5. At the end, in **Test users**, click **Add users** and add your own Google email (the one with GSC access). ⚠️ This is mandatory, otherwise Google will refuse the sign-in.
+
+#### 4.4 — Create the OAuth Client ID
+
+1. In **APIs & Services**, go to **Credentials**.
+2. Click **+ Create credentials** at the top → **OAuth client ID**.
+3. **Application type**: pick **Desktop app** (important).
+4. Name it (e.g. "MCP GSC Desktop") → **Create**.
+5. A dialog shows your **Client ID** and **Client Secret**. **Keep it open** — you'll need them in the next step.
+
+### Step 5 — Run the auth helper
+
+Back in your terminal (still in the `mcp-gsc-lucky` folder):
 
 ```bash
 node dist/auth.js
 ```
 
-Paste Client ID and Client Secret. A browser opens, you sign in with your Google account (the one with GSC access), authorize, and pick the default property.
+The helper will ask you to:
+1. **Paste your Client ID** (from step 4.4) → enter
+2. **Paste your Client Secret** → enter
+3. A browser opens automatically → **sign in with the Google account** that has GSC access (same as the test user from step 4.3) → authorize
+4. The helper shows your accessible GSC properties → **pick one as default**
+   > Reminder: this pick is not a limit. You can still query other sites by naming them in your Claude prompts.
 
-At the end, the helper prints a **ready-to-paste JSON block** in the terminal, with your absolute path and credentials already filled in. Copy it.
+At the end, the helper prints a **ready-to-paste JSON block** in the terminal containing all your credentials and the absolute path to the server. **Copy the whole block** — you'll need it right after.
 
-#### Step 4 — Configure Claude Desktop
+### Step 6 — Configure Claude Desktop
 
-Edit `claude_desktop_config.json`:
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+1. Open `claude_desktop_config.json`:
+   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json` (paste that path into Explorer)
+   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-Paste the block generated by the helper inside `"mcpServers"`. It looks like:
+   If the file doesn't exist, create it. First-time content should look like:
+   ```json
+   {
+     "mcpServers": {}
+   }
+   ```
 
-```json
-{
-  "mcpServers": {
-    "gsc-lucky": {
-      "command": "node",
-      "args": ["C:\\absolute\\path\\to\\mcp-gsc-lucky\\dist\\index.js"],
-      "env": {
-        "GSC_LUCKY_CLIENT_ID": "xxx.apps.googleusercontent.com",
-        "GSC_LUCKY_CLIENT_SECRET": "GOCSPX-xxx",
-        "GSC_LUCKY_REFRESH_TOKEN": "1//0xxx",
-        "GSC_DEFAULT_SITE_URL": "sc-domain:example.com"
-      }
-    }
-  }
-}
-```
+2. Paste the block generated by the helper **inside** `"mcpServers": { ... }`. Final result:
 
-> On Windows, backslashes are already doubled in the generated block — just paste as-is.
+   ```json
+   {
+     "mcpServers": {
+       "gsc-lucky": {
+         "command": "node",
+         "args": ["C:\\Users\\YourName\\mcp\\mcp-gsc-lucky-ready\\mcp-gsc-lucky\\dist\\index.js"],
+         "env": {
+           "GSC_LUCKY_CLIENT_ID": "xxx.apps.googleusercontent.com",
+           "GSC_LUCKY_CLIENT_SECRET": "GOCSPX-xxx",
+           "GSC_LUCKY_REFRESH_TOKEN": "1//0xxx",
+           "GSC_DEFAULT_SITE_URL": "sc-domain:example.com"
+         }
+       }
+     }
+   }
+   ```
 
-#### Step 5 — Restart Claude Desktop
+   > If you already have other MCPs configured, add **just** the `"gsc-lucky": { ... }` entry next to them, minding the JSON commas.
 
-Fully quit (right-click the systray icon → Quit) and reopen. Test: *"List my Search Console properties."*
+3. Save the file.
 
-### Alternatives
+### Step 7 — Restart Claude Desktop
 
-If you'd rather not put credentials in the Claude config, two other modes are supported:
+1. **Fully quit** Claude Desktop. Closing the window is not enough:
+   - **Windows**: right-click the Claude icon in the system tray → **Quit**
+   - **macOS**: `Cmd + Q` while Claude is focused
+2. Reopen Claude Desktop.
 
-- **Via credentials file**: the OAuth helper already saved your credentials to `~/.config/mcp-gsc-lucky/credentials.json`. In that case, the Claude config can be trimmed to `command` and `args` only — no `env` block. The helper prints this variant too.
-- **Via service account (agency multi-client)**: see below.
+### Step 8 — Test it
 
-### Multi-account mode (agency use)
+In Claude, type:
 
-To handle multiple clients without re-consenting, use a **service account** instead of user OAuth:
+> *List my Search Console properties.*
 
-1. Create a service account in Google Cloud Console, download its JSON key.
-2. In each GSC property: Settings → Users and permissions → add the service account email as a user.
-3. In `claude_desktop_config.json`:
+You should see the list of your sites appear. If yes, you're all set 🎉
 
-```json
-{
-  "mcpServers": {
-    "gsc-lucky": {
-      "command": "node",
-      "args": ["/path/to/dist/index.js"],
-      "env": {
-        "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/service-account.json",
-        "GSC_DEFAULT_SITE_URL": "sc-domain:example.com"
-      }
-    }
-  }
-}
-```
+### Quick troubleshooting
 
-The service account takes priority over user OAuth when both are configured.
-
-### Troubleshooting
-
-- **Claude says "server disconnected"** → the MCP crashed on startup. 90% of the time: missing credentials. Run `node dist/auth.js`.
-- **403 error** → the account is not listed as a user on the GSC property. Add it in Search Console → Settings → Users and permissions.
-- **401 error** → refresh token revoked or expired. Re-run `node dist/auth.js`.
-- **`invalid and ignored`** in config → JSON syntax error. Check commas, braces, and doubled backslashes on Windows.
+- **Claude says "server disconnected"** → the MCP is crashing on startup. 90% of the time it's a credentials or path issue. Re-run `node dist/auth.js` to regenerate the block to paste.
+- **JSON error "invalid and ignored"** → syntax error in `claude_desktop_config.json`. Check commas between servers, closing braces, and that Windows backslashes are doubled (`\\`).
+- **403 error in Claude** → your account isn't a user on the GSC property. Add it in Search Console → Settings → Users and permissions.
+- **401 error** → the refresh token expired (can happen after a few months). Re-run `node dist/auth.js` to get a fresh one.
 
 ---
 
