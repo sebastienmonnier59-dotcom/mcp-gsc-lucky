@@ -1,0 +1,53 @@
+{
+  "name": "mcp-gsc-lucky",
+  "version": "0.1.0",
+  "description": "MCP server for Google Search Console: search analytics, URL inspection, sitemaps, keyword opportunities, top pages, and period comparison.",
+  "author": "Sébastien Monnier",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-gsc-lucky": "dist/index.js",
+    "mcp-gsc-lucky-auth": "dist/auth.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "auth": "node dist/auth.js",
+    "auth:dev": "tsx src/auth.ts"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "google-auth-library": "^9.14.0",
+    "open": "^10.1.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.28.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sebastienmonnier59-dotcom/mcp-gsc-lucky.git"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "google-search-console",
+    "gsc",
+    "seo",
+    "claude"
+  ]
+}
